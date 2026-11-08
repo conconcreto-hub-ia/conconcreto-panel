@@ -7,7 +7,7 @@ import { db } from "@/lib/db";
 import { haceCuanto } from "@/lib/formato";
 
 export const dynamic = "force-dynamic";
-export const metadata = { title: "Bitácora · Panel Conconcreto" };
+export const metadata = { title: "Bitácora · Hub de IA Conconcreto" };
 
 const TIPO: Record<string, string> = {
   "acceso.otorgado": "Dio acceso", "acceso.cambiado": "Cambió el rol", "acceso.retirado": "Quitó el acceso",

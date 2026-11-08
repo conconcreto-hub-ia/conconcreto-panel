@@ -1,36 +1,39 @@
 @import "tailwindcss";
 
 /* ─────────────────────────────────────────────────────────────────────
-   Sistema de diseño · Conconcreto x irrelevant
-   Sale del material de S1 (Conconcreto x irrelevant - Skills S1.html):
-   noche + verde Conconcreto + el degradado oro → naranja del logo.
+   Hub de IA · Conconcreto · el centro de mando
+   Oscuro de punta a punta: noche + verde Conconcreto + el degradado oro → naranja del logo.
+   Los tokens claros de las apps (papel, tinta, línea) aquí están invertidos, así que las
+   piezas del sistema (Tarjeta, Insignia, Dato…) se ven en oscuro sin tocarlas.
    Reglas: borde antes que sombra · un solo radio de superficie (14px) ·
    Montserrat para títulos y cifras, Work Sans para texto.
    La página de referencia es /sistema.
    ───────────────────────────────────────────────────────────────────── */
 
 :root {
-  --noche: #07130c;
-  --noche-2: #0d2216;
+  --noche: #050d08;
+  --noche-2: #0a1810;
   --noche-3: #0b2a17;
   --verde: #3dae2b;
-  --verde-profundo: #07582b;
-  --verde-suave: #eaf6e7;
+  --verde-profundo: #7fd86c;   /* en oscuro, el verde de texto es el claro */
+  --verde-suave: rgba(61,174,43,.14);
   --oro: #efbf01;
-  --oro-suave: #fff3cf;
+  --oro-suave: rgba(239,191,1,.13);
   --naranja: #d8800d;
-  --rojo: #c2410c;
-  --rojo-suave: #fdeee6;
-  --tinta: #141a16;
-  --tinta-2: #48514b;
-  --tinta-3: #7b847e;
-  --linea: #e2e7e3;
-  --linea-2: #eef2ee;
-  --fondo: #f6f8f5;
-  --papel: #ffffff;
+  --rojo: #ff7a4d;
+  --rojo-suave: rgba(255,122,77,.13);
+  --tinta: #e9f0ea;
+  --tinta-2: rgba(233,240,234,.72);
+  --tinta-3: rgba(233,240,234,.46);
+  --linea: rgba(255,255,255,.10);
+  --linea-2: rgba(255,255,255,.06);
+  --fondo: #050d08;
+  --papel: #0b1711;
+  --panel-2: #0e1d15;
   --degradado: linear-gradient(90deg, #efbf01 0%, #e3a207 55%, #d8800d 100%);
   --r: 14px;
   --r-control: 10px;
+  color-scheme: dark;
 }
 
 @theme inline {
@@ -62,7 +65,11 @@
 html { -webkit-font-smoothing: antialiased; }
 body {
   margin: 0;
-  background: var(--fondo);
+  background:
+    radial-gradient(900px 500px at 85% -10%, rgba(239,191,1,.07), transparent 60%),
+    radial-gradient(800px 600px at -10% 10%, rgba(61,174,43,.10), transparent 60%),
+    var(--fondo);
+  background-attachment: fixed;
   color: var(--tinta);
   font-family: var(--font-sans);
   font-size: 15px;
@@ -114,3 +121,54 @@ h1, h2, h3, h4 { font-family: var(--font-display); letter-spacing: -0.02em; marg
 .aja > * { position: relative; z-index: 1; }
 
 :focus-visible { outline: 2px solid var(--verde); outline-offset: 2px; }
+
+/* ── El centro de mando ─────────────────────────────────────────────── */
+
+/* La grilla técnica de fondo, desvanecida hacia los bordes */
+.grilla { position: relative; }
+.grilla::before {
+  content: ""; position: fixed; inset: 0; pointer-events: none; z-index: 0;
+  background-image: linear-gradient(rgba(255,255,255,.035) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,.035) 1px, transparent 1px);
+  background-size: 48px 48px;
+  mask-image: radial-gradient(ellipse at 50% 0%, #000 20%, transparent 75%);
+  -webkit-mask-image: radial-gradient(ellipse at 50% 0%, #000 20%, transparent 75%);
+}
+.grilla > * { position: relative; z-index: 1; }
+
+/* Un módulo de la consola: borde fino, esquinas marcadas, brillo al pasar */
+.modulo {
+  position: relative; border: 1px solid var(--linea); border-radius: var(--r);
+  background: linear-gradient(180deg, rgba(255,255,255,.035), rgba(255,255,255,.01)), var(--papel);
+  transition: border-color .2s ease, transform .2s ease;
+}
+.modulo:hover { border-color: rgba(127,216,108,.35); }
+.modulo::after {
+  content: ""; position: absolute; inset: -1px; border-radius: inherit; pointer-events: none;
+  background:
+    linear-gradient(var(--oro), var(--oro)) top left / 14px 1px no-repeat,
+    linear-gradient(var(--oro), var(--oro)) top left / 1px 14px no-repeat,
+    linear-gradient(var(--oro), var(--oro)) bottom right / 14px 1px no-repeat,
+    linear-gradient(var(--oro), var(--oro)) bottom right / 1px 14px no-repeat;
+  opacity: .55;
+}
+
+/* Rótulo técnico: mayúsculas en mono */
+.rotulo { font: 500 11px var(--font-mono); letter-spacing: .14em; text-transform: uppercase; color: var(--tinta-3); }
+
+/* Los LED de estado */
+.led { display: inline-block; width: 8px; height: 8px; border-radius: 50%; flex: none; }
+.led-ok { background: #4ade80; box-shadow: 0 0 0 3px rgba(74,222,128,.18), 0 0 12px rgba(74,222,128,.7); animation: latir-ok 2.4s ease-in-out infinite; }
+.led-mal { background: var(--rojo); box-shadow: 0 0 10px rgba(255,122,77,.7); }
+.led-off { background: rgba(255,255,255,.22); }
+@keyframes latir-ok { 50% { box-shadow: 0 0 0 7px rgba(74,222,128,0), 0 0 12px rgba(74,222,128,.7); } }
+@media (prefers-reduced-motion: reduce) { .led-ok { animation: none; } }
+
+/* Barrido de escaneo sobre la cabecera */
+.escaneo { position: relative; overflow: hidden; }
+.escaneo::after {
+  content: ""; position: absolute; top: 0; bottom: 0; width: 30%; left: -30%; pointer-events: none;
+  background: linear-gradient(90deg, transparent, rgba(239,191,1,.06), transparent);
+  animation: barrer 7s linear infinite;
+}
+@keyframes barrer { to { left: 110%; } }
+@media (prefers-reduced-motion: reduce) { .escaneo::after { animation: none; display: none; } }

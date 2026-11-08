@@ -28,11 +28,12 @@ export default async function FichaApp({ params, searchParams }: { params: Promi
     <>
       <Barra />
       <Contenedor className="space-y-6 py-10">
+        <a href="/" className="rotulo hover:text-white">← Centro de mando</a>
         <Encabezado
           et={ESTADO[app.estado].etiqueta}
           titulo={app.nombre}
           bajada={app.resumen}
-          acciones={puedeEntrar ? <a href={`/ir/${app.slug}`} className="inline-flex h-10 items-center gap-2 rounded-ctl bg-verde px-4 font-display text-[14px] font-semibold text-white hover:bg-verde-profundo">Entrar <IconoExterno className="size-4" /></a> : undefined}
+          acciones={puedeEntrar ? <a href={`/ir/${app.slug}`} className="inline-flex h-10 items-center gap-2 rounded-ctl px-4 font-display text-[14px] font-bold text-[#1a1300] [background:var(--degradado)] hover:brightness-110">Entrar <IconoExterno className="size-4" /></a> : undefined}
         />
         {error && <p role="alert" className="rounded-ctl border border-rojo/30 bg-rojo-suave px-4 py-3 text-[14px] text-rojo">{error}</p>}
 
@@ -108,13 +109,13 @@ export default async function FichaApp({ params, searchParams }: { params: Promi
           <aside className="space-y-4">
             <Tarjeta className="space-y-3 p-5 text-[14px]">
               <Dato k="La llevan">{app.duenos}</Dato>
-              <Dato k="Dirección">{app.url ? <a href={app.url} className="break-all text-verde-profundo hover:underline">{app.url.replace(/^https:\/\//, "")}</a> : "Aún no está publicada"}</Dato>
-              {esAdmin && <Dato k="Conexión con el panel">{appConectada(app.slug) ? "Conectada" : "Falta el secreto del pase"}</Dato>}
+              <Dato k="Dirección">{app.url ? <a href={app.url} className="break-all text-verde-profundo hover:underline">{app.url.replace(/^https:\/\//, "")}</a> : "Aún no está publicado"}</Dato>
+              {esAdmin && <Dato k="Conexión con el hub">{appConectada(app.slug) ? "Conectada" : "Falta el secreto del pase"}</Dato>}
               {av.ok && av.despliegue && <Dato k="Última publicación">{av.despliegue.estado === "success" ? "Publicada" : av.despliegue.estado} · {haceCuanto(av.despliegue.fecha)}</Dato>}
             </Tarjeta>
 
             <Tarjeta className="p-5">
-              <h3 className="text-[15px] font-bold">Los roles dentro de la app</h3>
+              <h3 className="text-[15px] font-bold">Los roles dentro del agente</h3>
               <ul className="mt-2 space-y-2 pl-0">
                 {roles.map((r) => <li key={r.valor} className="list-none text-[13.5px]"><b className="font-display font-semibold">{r.etiqueta}</b> <span className="text-tinta-2">· {r.detalle}</span></li>)}
               </ul>
@@ -123,7 +124,7 @@ export default async function FichaApp({ params, searchParams }: { params: Promi
             {esAdmin && (
               <Tarjeta className="p-5">
                 <h3 className="text-[15px] font-bold">Quién entra</h3>
-                {app.accesos.length === 0 ? <p className="mt-1 text-[13.5px] text-tinta-3">Nadie todavía, salvo los administradores del panel.</p> : (
+                {app.accesos.length === 0 ? <p className="mt-1 text-[13.5px] text-tinta-3">Nadie todavía, salvo los administradores del hub.</p> : (
                   <ul className="mt-2 space-y-1.5 pl-0">
                     {app.accesos.map((a) => <li key={a.id} className="list-none text-[13.5px]"><span className="font-semibold">{a.usuario.nombre}</span> <span className="text-tinta-3">· {roles.find((r) => r.valor === a.rol)?.etiqueta ?? a.rol}</span></li>)}
                   </ul>

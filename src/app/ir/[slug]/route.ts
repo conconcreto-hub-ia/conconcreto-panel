@@ -18,14 +18,14 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ slug
 
   const app = await db.app.findUnique({ where: { slug } });
   if (!app) return NextResponse.redirect(new URL("/", req.url));
-  if (!app.url) return volver("Esta app todavía no está publicada.");
-  if (!appConectada(app.slug)) return volver("Esta app todavía no está conectada al panel.");
+  if (!app.url) return volver("Este agente todavía no está publicado.");
+  if (!appConectada(app.slug)) return volver("Este agente todavía no está conectado al hub.");
 
   // El administrador del panel entra a todas como administrador; los demás, con el rol que les dieron.
   let rol: string | undefined;
   if (u.rol === "admin") rol = rolesDe(app).some((r) => r.valor === "admin") ? "admin" : rolesDe(app)[0]?.valor;
   else rol = (await db.acceso.findUnique({ where: { usuarioId_appId: { usuarioId: u.id, appId: app.id } } }))?.rol;
-  if (!rol) return volver("No tienes acceso a esta app. Pídeselo al administrador del panel.");
+  if (!rol) return volver("No tienes acceso a este agente. Pídeselo al administrador del hub.");
 
   const t = await firmarPase(app.slug, { tipo: "entrada", correo: u.correo, nombre: u.nombre, rol });
   await db.evento.create({ data: { tipo: "app.entrada", quien: u.nombre, appId: app.id, detalle: `Entró a ${app.nombre}` } });

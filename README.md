@@ -1,9 +1,9 @@
-# Panel de apps · Conconcreto
+# Hub de IA · Conconcreto
 
-Las apps que Conconcreto construye en el programa Think AI, en un solo lugar: qué hace cada una, cómo va
+El centro de mando de los agentes de IA de Conconcreto: qué hace cada una, cómo va
 (leído de su repo en GitHub) y quién entra a cuál. Es la puerta única: una cuenta aquí, y desde aquí se entra
 a cada app sin volver a poner la clave.
-Conconcreto x irrelevant · programa Think AI, 2026.
+Solo lleva la marca Conconcreto: es la herramienta de ellos.
 
 ## Cómo funciona la entrada a una app
 

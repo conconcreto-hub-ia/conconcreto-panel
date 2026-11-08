@@ -21,8 +21,8 @@ const jetbrains = JetBrains_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Panel de apps · Conconcreto",
-  description: "Las apps que Conconcreto construye en Think AI: quién entra a cada una y cómo van.",
+  title: "Hub de IA · Conconcreto",
+  description: "El centro de mando de los agentes de IA de Conconcreto.",
 };
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {

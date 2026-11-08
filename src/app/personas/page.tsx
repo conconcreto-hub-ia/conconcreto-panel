@@ -9,7 +9,7 @@ import { haceCuanto } from "@/lib/formato";
 import { FormNuevoUsuario, FilaAcciones, SelectorAcceso } from "./controles";
 
 export const dynamic = "force-dynamic";
-export const metadata = { title: "Personas · Panel Conconcreto" };
+export const metadata = { title: "Personas · Hub de IA Conconcreto" };
 
 export default async function Personas() {
   const yo = await exigirSesion();
@@ -25,8 +25,8 @@ export default async function Personas() {
       <Contenedor className="space-y-6 py-10">
         <Encabezado
           et="Personas"
-          titulo="Quién entra a qué app"
-          bajada="Cada persona tiene una sola cuenta, la del panel. Desde aquí decides a qué app entra y con qué rol dentro de ella. Quitar un acceso o desactivar a alguien le cierra la sesión también en la app."
+          titulo="Quién opera cada agente"
+          bajada="Cada persona tiene una sola cuenta, la del hub. Desde aquí decides a qué agente entra y con qué rol dentro de él. Quitar un acceso o desactivar a alguien le cierra la sesión también en el agente."
         />
         <div className="space-y-6">
           <Tarjeta className="min-w-0 overflow-x-auto">
@@ -35,7 +35,7 @@ export default async function Personas() {
                 <tr className="text-left text-[12px] text-tinta-3">
                   <th className="px-5 py-3 font-medium">Persona</th>
                   {apps.map((a) => <th key={a.id} className="px-2 py-3 font-medium">{a.nombre}</th>)}
-                  <th className="px-3 py-3 font-medium">Panel</th>
+                  <th className="px-3 py-3 font-medium">En el hub</th>
                   <th className="px-5 py-3 font-medium" />
                 </tr>
               </thead>
@@ -54,7 +54,7 @@ export default async function Personas() {
                     {apps.map((a) => (
                       <td key={a.id} className="px-2 py-3">
                         {u.rol === "admin"
-                          ? <span className="text-[12.5px] text-tinta-3" title="El administrador del panel entra a todas como administrador">Todas (admin)</span>
+                          ? <span className="text-[12.5px] text-tinta-3" title="El administrador del hub entra a todos como administrador">Todos (admin)</span>
                           : <SelectorAcceso usuarioId={u.id} appId={a.id} nombreApp={a.nombre} rol={u.accesos.find((x) => x.appId === a.id)?.rol ?? ""} roles={rolesDe(a)} />}
                       </td>
                     ))}
@@ -71,11 +71,11 @@ export default async function Personas() {
               <FormNuevoUsuario />
             </Tarjeta>
             <Tarjeta className="p-5">
-              <h3 className="text-[15px] font-bold">En el panel</h3>
+              <h3 className="text-[15px] font-bold">En el hub</h3>
               <ul className="mt-2 space-y-2 pl-0">
                 {Object.values(ROL).map((r) => <li key={r.etiqueta} className="list-none text-[13.5px]"><b className="font-display font-semibold">{r.etiqueta}</b> <span className="text-tinta-2">· {r.detalle}</span></li>)}
               </ul>
-              <p className="mt-3 text-[12.5px] text-tinta-3">El rol dentro de cada app (por ejemplo «Comité» en Licitaciones) se elige en su columna. Cada app explica sus roles en su ficha.</p>
+              <p className="mt-3 text-[12.5px] text-tinta-3">El rol dentro de cada agente (por ejemplo «Comité» en Licitaciones) se elige en su columna. Cada agente explica sus roles en su detalle.</p>
             </Tarjeta>
           </aside>
         </div>

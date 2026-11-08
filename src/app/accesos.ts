@@ -19,11 +19,11 @@ export async function accionAcceso(usuarioId: string, appId: string, rol: string
     await db.evento.create({ data: { tipo: "acceso.retirado", quien: yo.nombre, appId, detalle: `${persona.nombre} ya no entra a ${app.nombre}` } });
     const aviso = await avisarRetiro(app, persona);
     revalidatePath("/personas"); revalidatePath(`/apps/${app.slug}`);
-    return aviso ? { aviso: `Quitado del panel. ${aviso}` } : {};
+    return aviso ? { aviso: `Quitado del hub. ${aviso}` } : {};
   }
 
   const r = rolesDe(app).find((x) => x.valor === rol);
-  if (!r) throw new Error("Ese rol no existe en esta app.");
+  if (!r) throw new Error("Ese rol no existe en este agente.");
   await db.acceso.upsert({ where: { usuarioId_appId: { usuarioId, appId } }, update: { rol, otorgadoPor: yo.nombre }, create: { usuarioId, appId, rol, otorgadoPor: yo.nombre } });
   await db.evento.create({ data: { tipo: previo ? "acceso.cambiado" : "acceso.otorgado", quien: yo.nombre, appId, detalle: `${persona.nombre} entra a ${app.nombre} como ${r.etiqueta}` } });
   revalidatePath("/personas"); revalidatePath(`/apps/${app.slug}`);

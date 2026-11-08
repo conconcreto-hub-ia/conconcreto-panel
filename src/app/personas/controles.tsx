@@ -81,7 +81,7 @@ export function SelectorAcceso({ usuarioId, appId, rol, roles, nombreApp }: { us
         <option value="">Sin acceso</option>
         {roles.map((r) => <option key={r.valor} value={r.valor}>{r.etiqueta}</option>)}
       </select>
-      {aviso && <p className="mt-1 max-w-[180px] text-[11.5px] text-[#8a5a00]">{aviso}</p>}
+      {aviso && <p className="mt-1 max-w-[180px] text-[11.5px] text-oro">{aviso}</p>}
     </div>
   );
 }

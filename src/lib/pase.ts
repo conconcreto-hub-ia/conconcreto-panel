@@ -19,7 +19,7 @@ export const variableSecreto = (slug: string) => `PASE_SECRETO_${slug.toUpperCas
 
 function llave(slug: string) {
   const s = process.env[variableSecreto(slug)];
-  if (!s || s.length < 32) throw new Error(`Falta ${variableSecreto(slug)} (mínimo 32 caracteres): esta app todavía no está conectada al panel.`);
+  if (!s || s.length < 32) throw new Error(`Falta ${variableSecreto(slug)} (mínimo 32 caracteres): este agente todavía no está conectado al hub.`);
   return new TextEncoder().encode(s);
 }
 
@@ -41,13 +41,13 @@ export async function firmarPase(slug: string, d: DatosPase): Promise<string> {
 
 /** Le avisa a la app que esta persona ya no entra. Devuelve el error en texto si la app no contestó bien. */
 export async function avisarRetiro(app: { slug: string; url: string | null }, persona: { correo: string; nombre: string }): Promise<string | null> {
-  if (!app.url) return "La app no tiene dirección todavía: el retiro se aplica cuando esté desplegada.";
-  if (!appConectada(app.slug)) return "La app no está conectada al panel.";
+  if (!app.url) return "El agente no tiene dirección todavía: el retiro se aplica cuando esté publicado.";
+  if (!appConectada(app.slug)) return "El agente no está conectado al hub.";
   try {
     const t = await firmarPase(app.slug, { tipo: "retiro", ...persona });
     const r = await fetch(new URL("/api/pase/retirar", app.url), { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ t }), cache: "no-store" });
-    return r.ok ? null : `La app respondió ${r.status}.`;
+    return r.ok ? null : `El agente respondió ${r.status}.`;
   } catch (e) {
-    return `No se pudo hablar con la app: ${e instanceof Error ? e.message : String(e)}`;
+    return `No se pudo hablar con el agente: ${e instanceof Error ? e.message : String(e)}`;
   }
 }

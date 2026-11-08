@@ -9,16 +9,15 @@ const cx = (...c: (string | false | null | undefined)[]) => c.filter(Boolean).jo
 
 /* ── Marca ──────────────────────────────────────────────────────────── */
 
-export function Marca({ fondo = "oscuro", compacta = false }: { fondo?: "oscuro" | "claro"; compacta?: boolean }) {
-  const cc = fondo === "oscuro" ? "/marca/conconcreto-blanco.svg" : "/marca/conconcreto-oscuro.svg";
-  const ir = fondo === "oscuro" ? "/marca/irrelevant-blanco.png" : "/marca/irrelevant-oscuro.png";
+export function Marca({ compacta = false }: { fondo?: "oscuro" | "claro"; compacta?: boolean }) {
   return (
     <div className="flex items-center gap-3">
       {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img src={cc} alt="Conconcreto" className={compacta ? "h-7 w-auto" : "h-9 w-auto"} />
-      <span className={cx("font-display font-medium", compacta ? "text-base" : "text-lg", fondo === "oscuro" ? "text-white/50" : "text-tinta-3")}>x</span>
-      {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img src={ir} alt="irrelevant" className={compacta ? "h-5 w-auto" : "h-6 w-auto"} />
+      <img src="/marca/conconcreto-blanco.svg" alt="Conconcreto" className={compacta ? "h-7 w-auto" : "h-9 w-auto"} />
+      <span className="h-5 w-px bg-white/20" />
+      <span className={cx("whitespace-nowrap font-mono font-medium uppercase tracking-[.2em] text-white/85", compacta ? "text-[11.5px]" : "text-[13px]")}>
+        Hub de <span className="dorado font-semibold">IA</span>
+      </span>
     </div>
   );
 }
@@ -52,10 +51,10 @@ type Variante = "primario" | "secundario" | "fantasma" | "oscuro" | "peligro";
 
 const ESTILO_BOTON: Record<Variante, string> = {
   primario: "text-[#1a1300] [background:var(--degradado)] hover:brightness-[1.04]",
-  secundario: "border border-linea bg-papel text-tinta hover:border-[#cfd8d1] hover:bg-fondo",
+  secundario: "border border-linea bg-white/[.03] text-tinta hover:border-white/25 hover:bg-white/[.06]",
   fantasma: "text-verde-profundo hover:bg-verde-suave",
   oscuro: "bg-noche-2 text-white hover:bg-noche",
-  peligro: "border border-linea bg-papel text-rojo hover:border-rojo/40 hover:bg-rojo-suave",
+  peligro: "border border-linea bg-white/[.03] text-rojo hover:border-rojo/40 hover:bg-rojo-suave",
 };
 
 const claseBoton = (v: Variante, chico?: boolean) =>
@@ -93,7 +92,7 @@ export function Aja({ etiqueta = "Lo que encontró el agente", children, classNa
 const ESTILO_TONO: Record<Tono, string> = {
   neutro: "bg-linea-2 text-tinta-2",
   verde: "bg-verde-suave text-verde-profundo",
-  oro: "bg-oro-suave text-[#8a5a00]",
+  oro: "bg-oro-suave text-oro",
   rojo: "bg-rojo-suave text-rojo",
   noche: "bg-noche-2 text-white",
 };

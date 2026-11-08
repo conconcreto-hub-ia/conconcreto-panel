@@ -14,6 +14,6 @@ export type Permiso = keyof typeof PERMISOS;
 export const puede = (rol: Rol | null | undefined, p: Permiso) => !!rol && (PERMISOS[p] as readonly Rol[]).includes(rol);
 
 export const ROL: Record<Rol, { etiqueta: string; detalle: string }> = {
-  admin: { etiqueta: "Administrador", detalle: "Agrega personas y decide a qué app entra cada una" },
-  miembro: { etiqueta: "Miembro", detalle: "Entra a las apps que le dieron, con el rol que le dieron" },
+  admin: { etiqueta: "Administrador", detalle: "Agrega personas y decide qué agente opera cada una" },
+  miembro: { etiqueta: "Miembro", detalle: "Entra a los agentes que le dieron, con el rol que le dieron" },
 };

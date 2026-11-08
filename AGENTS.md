@@ -1,4 +1,4 @@
-# Panel de apps · Conconcreto
+# Hub de IA · Conconcreto
 
 Next.js 16 (webpack) + React 19 + Tailwind 4 + Prisma 7 sobre Neon. Puerto 3015. El sistema de diseño y el
 acceso salen de `conconcreto-licitaciones`: si cambias uno, piensa en los otros.
