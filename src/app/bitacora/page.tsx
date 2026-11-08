@@ -12,6 +12,7 @@ export const metadata = { title: "Bitácora · Hub de IA Conconcreto" };
 const TIPO: Record<string, string> = {
   "acceso.otorgado": "Dio acceso", "acceso.cambiado": "Cambió el rol", "acceso.retirado": "Quitó el acceso",
   "app.entrada": "Entró", "app.editada": "Editó la ficha", "usuario.desactivado": "Desactivó",
+  "usuario.creado": "Agregó a", "usuario.rol": "Cambió el rol en el hub", "usuario.github": "Cambió el GitHub", codigo: "Acceso al código",
 };
 
 export default async function Bitacora() {

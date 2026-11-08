@@ -1,13 +1,13 @@
 // La barra superior con la persona conectada. Las páginas importan esta; la parte interactiva es BarraCliente.
 import type { ReactNode } from "react";
 import { usuarioActual } from "@/lib/auth/sesion";
-import { ROL } from "@/lib/auth/permisos";
+import { ROL, administra } from "@/lib/auth/permisos";
 import { BarraCliente } from "./barra-cliente";
 
 export async function Barra({ agenteActivo = true, children }: { agenteActivo?: boolean; children?: ReactNode }) {
   const u = await usuarioActual();
   return (
-    <BarraCliente agenteActivo={agenteActivo} usuario={u ? { nombre: u.nombre, rol: ROL[u.rol].etiqueta, esAdmin: u.rol === "admin" } : null}>
+    <BarraCliente agenteActivo={agenteActivo} usuario={u ? { nombre: u.nombre, rol: ROL[u.rol].etiqueta, esAdmin: administra(u.rol) } : null}>
       {children}
     </BarraCliente>
   );

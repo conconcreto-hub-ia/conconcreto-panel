@@ -7,6 +7,7 @@ import { db } from "@/lib/db";
 import { ESTADO, rolesDe } from "@/lib/apps";
 import { avance } from "@/lib/github";
 import { appConectada } from "@/lib/pase";
+import { administra } from "@/lib/auth/permisos";
 import { fecha, haceCuanto } from "@/lib/formato";
 import { EditorApp } from "./editor";
 
@@ -18,11 +19,12 @@ export default async function FichaApp({ params, searchParams }: { params: Promi
   const { error } = await searchParams;
   const app = await db.app.findUnique({ where: { slug }, include: { accesos: { include: { usuario: true }, orderBy: { createdAt: "asc" } } } });
   if (!app) notFound();
-  const esAdmin = u.rol === "admin";
+  const esAdmin = administra(u.rol);
+  const esSuper = u.rol === "superadmin";
   const av = await avance(app.repo);
   const roles = rolesDe(app);
   const mio = app.accesos.find((a) => a.usuarioId === u.id);
-  const puedeEntrar = !!app.url && (esAdmin || !!mio);
+  const puedeEntrar = !!app.url && (esSuper || !!mio);
 
   return (
     <>
@@ -133,7 +135,7 @@ export default async function FichaApp({ params, searchParams }: { params: Promi
               </Tarjeta>
             )}
 
-            {esAdmin && <EditorApp id={app.id} estado={app.estado} url={app.url ?? ""} repo={app.repo ?? ""} />}
+            {esSuper && <EditorApp id={app.id} estado={app.estado} url={app.url ?? ""} repo={app.repo ?? ""} />}
           </aside>
         </div>
       </Contenedor>

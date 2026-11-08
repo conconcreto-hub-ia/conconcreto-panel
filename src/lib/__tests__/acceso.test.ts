@@ -45,11 +45,25 @@ describe("cookie firmada", () => {
 });
 
 describe("permisos", () => {
-  it("solo el administrador maneja personas y accesos", () => {
-    for (const p of ["usuarios.administrar", "accesos.administrar", "apps.editar"] as const) { expect(puede("admin", p)).toBe(true); expect(puede("miembro", p)).toBe(false); }
+  it("superadministrador y administrador manejan personas, accesos y código", () => {
+    for (const r of ["superadmin", "admin"] as const) for (const p of ["usuarios.administrar", "accesos.administrar", "github.administrar"] as const) expect(puede(r, p)).toBe(true);
   });
-  it("un miembro ve", () => expect(puede("miembro", "ver")).toBe(true));
+  it("solo el superadministrador nombra administradores y edita los agentes", () => {
+    expect(puede("superadmin", "roles.privilegiados")).toBe(true);
+    expect(puede("admin", "roles.privilegiados")).toBe(false);
+    expect(puede("admin", "apps.editar")).toBe(false);
+  });
+  it("un miembro solo ve", () => {
+    expect(puede("miembro", "ver")).toBe(true);
+    for (const p of ["usuarios.administrar", "accesos.administrar", "github.administrar", "roles.privilegiados", "apps.editar"] as const) expect(puede("miembro", p)).toBe(false);
+  });
   it("sin rol, nada", () => expect(puede(null, "ver")).toBe(false));
+});
+
+import { usuarioValido } from "../github-admin";
+describe("usuario de GitHub", () => {
+  it("acepta los válidos", () => { for (const u of ["jpgomezm1", "jaime-restrepo", "a1"]) expect(usuarioValido(u)).toBe(true); });
+  it("rechaza los inválidos", () => { for (const u of ["-jaime", "jaime-", "ja--ime", "con espacio", "a".repeat(40), "../x"]) expect(usuarioValido(u)).toBe(false); });
 });
 
 describe("a dónde volver después de ingresar", () => {

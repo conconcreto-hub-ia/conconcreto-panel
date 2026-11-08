@@ -1,7 +1,7 @@
 // Crea un usuario (o le pone una clave temporal nueva si ya existe). Sirve para el primer administrador:
 // después, los usuarios se manejan en /usuarios.
 //
-//   npx tsx scripts/crear-usuario.ts <correo> "<Nombre>" <admin|licitaciones|comite|consulta>
+//   npx tsx scripts/crear-usuario.ts <correo> "<Nombre>" <superadmin|admin|miembro>
 //
 // Imprime la clave temporal UNA vez. Se cambia en el primer ingreso.
 import "./_env";
@@ -10,9 +10,9 @@ import { cifrarClave, claveTemporal } from "../src/lib/auth/clave";
 import type { Rol } from "@prisma/client";
 
 const [correoArg, nombre, rolArg] = process.argv.slice(2);
-const ROLES = ["admin", "licitaciones", "comite", "consulta"];
+const ROLES = ["superadmin", "admin", "miembro"];
 if (!correoArg || !nombre || !ROLES.includes(rolArg)) {
-  console.error('Uso: npx tsx scripts/crear-usuario.ts <correo> "<Nombre>" <admin|licitaciones|comite|consulta>');
+  console.error('Uso: npx tsx scripts/crear-usuario.ts <correo> "<Nombre>" <superadmin|admin|miembro>');
   process.exit(1);
 }
 (async () => {

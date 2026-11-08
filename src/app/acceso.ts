@@ -9,6 +9,8 @@ import { cifrarClave, claveCorrecta, claveTemporal, problemaDeClave } from "@/li
 import type { Rol } from "@prisma/client";
 import { destinoSeguro } from "@/lib/auth/destino";
 import { avisarRetiro } from "@/lib/pase";
+import { puede, ROL } from "@/lib/auth/permisos";
+import { existeUsuario, quitarCodigo, usuarioValido } from "@/lib/github-admin";
 
 
 export async function accionIngresar(_: unknown, f: FormData): Promise<{ error: string } | undefined> {
@@ -37,53 +39,102 @@ export async function accionCambiarClave(_: unknown, f: FormData): Promise<{ err
   return { ok: true };
 }
 
-/* ── Usuarios (solo administrador) ─────────────────────────────────── */
+/* ── Personas (superadministrador y administrador) ─────────────────── */
+//
+// Reglas: un administrador agrega miembros y maneja a los que no son superadministradores. Solo un
+// superadministrador nombra administradores o superadministradores, o toca a otro superadministrador.
+// Nadie se quita su propio rol ni se desactiva a sí mismo. Siempre queda al menos un superadministrador.
 
-const ROLES: Rol[] = ["admin", "miembro"];
+const ROLES: Rol[] = ["superadmin", "admin", "miembro"];
+const PRIVILEGIADOS: Rol[] = ["superadmin", "admin"];
+
+async function exigirSobre(id: string) {
+  const yo = await exigir("usuarios.administrar");
+  const otro = await db.usuario.findUniqueOrThrow({ where: { id } });
+  if (otro.rol === "superadmin" && !puede(yo.rol, "roles.privilegiados")) throw new Error("Solo un superadministrador puede cambiar a otro superadministrador.");
+  return { yo, otro };
+}
 
 export async function accionCrearUsuario(_: unknown, f: FormData): Promise<{ error?: string; creado?: { correo: string; clave: string } }> {
-  await exigir("usuarios.administrar");
+  const yo = await exigir("usuarios.administrar");
   const nombre = String(f.get("nombre") ?? "").trim();
   const correo = String(f.get("correo") ?? "").trim().toLowerCase();
   const rol = String(f.get("rol") ?? "") as Rol;
   const cargo = String(f.get("cargo") ?? "").trim() || null;
+  const github = String(f.get("github") ?? "").trim().replace(/^@/, "") || null;
   if (!nombre) return { error: "Falta el nombre." };
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(correo)) return { error: "El correo no es válido." };
   if (!ROLES.includes(rol)) return { error: "Rol no válido." };
+  if (PRIVILEGIADOS.includes(rol) && !puede(yo.rol, "roles.privilegiados")) return { error: "Solo un superadministrador puede crear administradores." };
+  if (github && !usuarioValido(github)) return { error: "El usuario de GitHub no es válido." };
+  if (github && !(await existeUsuario(github))) return { error: `No existe el usuario @${github} en GitHub.` };
   if (await db.usuario.findUnique({ where: { correo } })) return { error: "Ya hay un usuario con ese correo." };
   const clave = claveTemporal();
-  await db.usuario.create({ data: { nombre, correo, cargo, rol, hash: await cifrarClave(clave), debeCambiarClave: true } });
+  await db.usuario.create({ data: { nombre, correo, cargo, github, rol, hash: await cifrarClave(clave), debeCambiarClave: true } });
+  await db.evento.create({ data: { tipo: "usuario.creado", quien: yo.nombre, detalle: `${nombre} (${correo}) como ${ROL[rol].etiqueta}` } });
   revalidatePath("/personas");
   return { creado: { correo, clave } };
 }
 
 export async function accionCambiarRol(id: string, rol: Rol) {
-  const yo = await exigir("usuarios.administrar");
+  const { yo, otro } = await exigirSobre(id);
   if (!ROLES.includes(rol)) throw new Error("Rol no válido.");
-  if (id === yo.id && rol !== "admin") throw new Error("No puedes quitarte el rol de administrador a ti mismo.");
+  if (id === yo.id) throw new Error("No puedes cambiar tu propio rol.");
+  if ((PRIVILEGIADOS.includes(rol) || PRIVILEGIADOS.includes(otro.rol)) && !puede(yo.rol, "roles.privilegiados")) throw new Error("Solo un superadministrador nombra o retira administradores.");
+  if (otro.rol === "superadmin" && rol !== "superadmin" && (await db.usuario.count({ where: { rol: "superadmin", activo: true } })) <= 1) throw new Error("Tiene que quedar al menos un superadministrador.");
   await db.usuario.update({ where: { id }, data: { rol } });
+  await db.evento.create({ data: { tipo: "usuario.rol", quien: yo.nombre, detalle: `${otro.nombre} pasa a ${ROL[rol].etiqueta}` } });
   revalidatePath("/personas");
 }
 
+/** El usuario de GitHub de una persona. Vacío lo borra (y le quita el acceso al código que tuviera). */
+export async function accionGithub(id: string, valor: string): Promise<{ aviso?: string }> {
+  const { yo, otro } = await exigirSobre(id);
+  const github = valor.trim().replace(/^@/, "") || null;
+  if (github && !usuarioValido(github)) throw new Error("El usuario de GitHub no es válido.");
+  if (github && !(await existeUsuario(github))) throw new Error(`No existe el usuario @${github} en GitHub.`);
+  if ((github ?? "") === (otro.github ?? "")) return {};
+  // Si cambia de usuario, el anterior sale de los repos; el acceso al código queda en «ninguno» para volver a darlo.
+  const avisos: string[] = [];
+  if (otro.github) {
+    const conCodigo = await db.acceso.findMany({ where: { usuarioId: id, codigo: { not: "ninguno" } }, include: { app: true } });
+    for (const a of conCodigo) {
+      if (a.app.repo) await quitarCodigo(a.app.repo, otro.github).catch((e) => avisos.push(e instanceof Error ? e.message : String(e)));
+      await db.acceso.update({ where: { id: a.id }, data: { codigo: "ninguno", codigoNota: null } });
+    }
+  }
+  await db.usuario.update({ where: { id }, data: { github } });
+  await db.evento.create({ data: { tipo: "usuario.github", quien: yo.nombre, detalle: `${otro.nombre}: GitHub ${github ? `@${github}` : "(sin usuario)"}` } });
+  revalidatePath("/personas");
+  return avisos.length ? { aviso: avisos.join(" ") } : {};
+}
+
 export async function accionActivar(id: string, activo: boolean) {
-  const yo = await exigir("usuarios.administrar");
+  const { yo, otro } = await exigirSobre(id);
   if (id === yo.id && !activo) throw new Error("No puedes desactivarte a ti mismo.");
+  if (!activo && otro.rol === "superadmin" && (await db.usuario.count({ where: { rol: "superadmin", activo: true } })) <= 1) throw new Error("Tiene que quedar al menos un superadministrador.");
   await db.$transaction([
     db.usuario.update({ where: { id }, data: { activo } }),
     // Desactivar cierra sus sesiones de inmediato.
     ...(activo ? [] : [db.sesion.deleteMany({ where: { usuarioId: id } })]),
   ]);
-  // Y en cada app a la que entraba: queda desactivada allá también, con sus sesiones cerradas.
   if (!activo) {
-    const p = await db.usuario.findUniqueOrThrow({ where: { id }, include: { accesos: { include: { app: true } } } });
-    await Promise.all(p.accesos.map((a) => avisarRetiro(a.app, p)));
-    await db.evento.create({ data: { tipo: "usuario.desactivado", quien: yo.nombre, detalle: `${p.nombre} desactivado en el panel y en ${p.accesos.length} app(s)` } });
+    // En cada agente queda desactivada también (a todos: un superadministrador entra sin acceso explícito),
+    // y sale de los repos a los que tenía acceso al código.
+    const apps = await db.app.findMany();
+    await Promise.all(apps.map((a) => avisarRetiro(a, otro)));
+    if (otro.github) {
+      const conCodigo = await db.acceso.findMany({ where: { usuarioId: id, codigo: { not: "ninguno" } }, include: { app: true } });
+      for (const a of conCodigo) if (a.app.repo) await quitarCodigo(a.app.repo, otro.github).catch(() => null);
+      await db.acceso.updateMany({ where: { usuarioId: id }, data: { codigo: "ninguno", codigoNota: null } });
+    }
+    await db.evento.create({ data: { tipo: "usuario.desactivado", quien: yo.nombre, detalle: `${otro.nombre} desactivado en el hub, en los agentes y en GitHub` } });
   }
   revalidatePath("/personas");
 }
 
 export async function accionNuevaClave(id: string): Promise<{ clave: string }> {
-  await exigir("usuarios.administrar");
+  await exigirSobre(id);
   const clave = claveTemporal();
   await db.$transaction([
     db.usuario.update({ where: { id }, data: { hash: await cifrarClave(clave), debeCambiarClave: true } }),

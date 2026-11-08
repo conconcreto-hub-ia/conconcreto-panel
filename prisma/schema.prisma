@@ -13,8 +13,16 @@ datasource db {
 }
 
 enum Rol {
-  admin   // maneja las personas y sus accesos a cada app
-  miembro // entra a las apps que le dieron
+  superadmin // todo: entra a todos los agentes como administrador y nombra administradores y superadministradores
+  admin      // maneja las personas, sus accesos a cada agente y su acceso al código
+  miembro    // entra a los agentes que le dieron
+}
+
+/// El acceso al código de un agente en GitHub (colaborador del repo).
+enum Codigo {
+  ninguno
+  lectura   // ve el código (pull)
+  escritura // puede cambiarlo (push)
 }
 
 enum EstadoApp {
@@ -29,6 +37,7 @@ model Usuario {
   correo           String    @unique
   nombre           String
   cargo            String?
+  github           String?   // usuario de GitHub, para darle acceso al código
   rol              Rol       @default(miembro)
   hash             String    // scrypt: sal:hash, en hex
   activo           Boolean   @default(true)
@@ -86,6 +95,8 @@ model Acceso {
   appId     String
   app       App      @relation(fields: [appId], references: [id], onDelete: Cascade)
   rol       String   // uno de App.roles[].valor
+  codigo    Codigo   @default(ninguno)
+  codigoNota String? // lo último que dijo GitHub: «invitación enviada», «ya era colaborador», o el error
   otorgadoPor String
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt

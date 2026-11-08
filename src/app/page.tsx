@@ -8,6 +8,7 @@ import { ESTADO } from "@/lib/apps";
 import { avance, type Avance } from "@/lib/github";
 import { salud, type Salud } from "@/lib/salud";
 import { haceCuanto } from "@/lib/formato";
+import { administra } from "@/lib/auth/permisos";
 
 export const dynamic = "force-dynamic";
 
@@ -15,7 +16,8 @@ const codigo = (orden: number) => `AG-${String(orden).padStart(2, "0")}`;
 
 export default async function CentroDeMando() {
   const u = await exigirSesion();
-  const esAdmin = u.rol === "admin";
+  const esAdmin = administra(u.rol);
+  const esSuper = u.rol === "superadmin";
   const hace7 = new Date(Date.now() - 7 * 86_400_000);
   const [apps, misAccesos, personas, entradas7, eventos] = await Promise.all([
     db.app.findMany({ orderBy: { orden: "asc" }, include: { _count: { select: { accesos: true } } } }),
@@ -94,7 +96,7 @@ export default async function CentroDeMando() {
                     av={avances[i]}
                     sal={saludes[i]}
                     personas={a._count.accesos}
-                    rolMio={misAccesos.find((m) => m.appId === a.id)?.rol ?? (esAdmin ? "admin" : null)}
+                    rolMio={misAccesos.find((m) => m.appId === a.id)?.rol ?? (esSuper ? "admin" : null)}
                   />
                 ))}
               </div>

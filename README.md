@@ -26,8 +26,20 @@ Persona ──ingresa──▶ panel (correo y clave)
   contesta, el panel lo dice en pantalla; la persona igual ya no puede entrar desde el panel.
 - **Las personas que entran por el panel no tienen clave en la app.** Su hash es `pase:sin-clave-propia`. El
   ingreso con clave de cada app sigue existiendo para su propio administrador.
-- **El administrador del panel entra a todas como administrador.** Los miembros, con el rol que se les dio en
-  `/personas` (cada app tiene sus roles: los guarda `App.roles`, sembrados en `scripts/sembrar.ts`).
+- **Tres roles en el hub** (`src/lib/auth/permisos.ts`): superadministrador (todo; entra a todos los agentes como
+  administrador; el único que nombra administradores o superadministradores o toca a otro superadministrador; siempre
+  queda al menos uno), administrador (agrega personas, da accesos y acceso al código; entra solo a los agentes que
+  tenga) y miembro. Las reglas viven en las acciones (`src/app/acceso.ts`, `src/app/accesos.ts`), no en la pantalla: se
+  probó inyectando la opción «Superadministrador» como administrador y el servidor lo rechaza.
+- Los roles dentro de cada agente los guarda `App.roles`, sembrados en `scripts/sembrar.ts`.
+
+## El acceso al código
+
+Cada persona tiene su usuario de GitHub (se comprueba que exista). Debajo de su rol en cada agente se elige «Ve el
+código» o «Edita el código» y el hub la deja como colaboradora del repo (`src/lib/github-admin.ts`); GitHub le manda la
+invitación. Quitarle el acceso al agente, cambiarle el usuario o desactivarla la saca del repo y cancela la invitación
+pendiente. Para eso usa **`GITHUB_ADMIN_TOKEN`** (fine-grained de la organización, Administration en lectura y
+escritura): es distinto de `GITHUB_TOKEN`, el de solo lectura que usa cada carga del centro de mando.
 
 ## El avance
 

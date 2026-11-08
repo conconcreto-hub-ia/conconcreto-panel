@@ -21,9 +21,9 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ slug
   if (!app.url) return volver("Este agente todavía no está publicado.");
   if (!appConectada(app.slug)) return volver("Este agente todavía no está conectado al hub.");
 
-  // El administrador del panel entra a todas como administrador; los demás, con el rol que les dieron.
+  // El superadministrador entra a todos como administrador; los demás, con el rol que les dieron.
   let rol: string | undefined;
-  if (u.rol === "admin") rol = rolesDe(app).some((r) => r.valor === "admin") ? "admin" : rolesDe(app)[0]?.valor;
+  if (u.rol === "superadmin") rol = rolesDe(app).some((r) => r.valor === "admin") ? "admin" : rolesDe(app)[0]?.valor;
   else rol = (await db.acceso.findUnique({ where: { usuarioId_appId: { usuarioId: u.id, appId: app.id } } }))?.rol;
   if (!rol) return volver("No tienes acceso a este agente. Pídeselo al administrador del hub.");
 
