@@ -1,0 +1,106 @@
+// El panel de Conconcreto · las apps que se construyen en el programa Think AI, en un solo lugar.
+//
+// Es la puerta única: una cuenta aquí, y desde aquí se entra a cada app sin volver a poner la clave
+// (un pase firmado de un minuto, ver src/lib/pase.ts). Quién entra a qué, y con qué rol dentro de
+// cada app, lo decide el administrador del panel. El avance de cada app se lee de su repo en GitHub.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum Rol {
+  admin   // maneja las personas y sus accesos a cada app
+  miembro // entra a las apps que le dieron
+}
+
+enum EstadoApp {
+  construccion // se está construyendo
+  demostracion // corre con datos de demostración
+  piloto       // la usa su dueño con sus datos
+  operacion    // en uso de verdad
+}
+
+model Usuario {
+  id               String    @id @default(cuid())
+  correo           String    @unique
+  nombre           String
+  cargo            String?
+  rol              Rol       @default(miembro)
+  hash             String    // scrypt: sal:hash, en hex
+  activo           Boolean   @default(true)
+  debeCambiarClave Boolean   @default(true)
+  ultimoIngreso    DateTime?
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+
+  sesiones Sesion[]
+  accesos  Acceso[]
+}
+
+model Sesion {
+  id        String   @id @default(cuid())
+  usuarioId String
+  usuario   Usuario  @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+  expiraEn  DateTime
+  createdAt DateTime @default(now())
+
+  @@index([usuarioId])
+}
+
+model IntentoIngreso {
+  id        String   @id @default(cuid())
+  correo    String
+  exito     Boolean
+  createdAt DateTime @default(now())
+
+  @@index([correo, createdAt])
+}
+
+model App {
+  id          String    @id @default(cuid())
+  slug        String    @unique // el mismo que la app espera en el pase (PANEL_APP)
+  nombre      String
+  resumen     String    // una línea: qué hace
+  problema    String    // el dolor, en palabras de quien lo vive
+  duenos      String    // quién la lleva en Conconcreto
+  estado      EstadoApp @default(construccion)
+  url         String?   // dónde vive desplegada
+  repo        String?   // owner/nombre en GitHub
+  roles       Json      // [{ valor, etiqueta, detalle }] · los roles que existen dentro de esa app
+  orden       Int       @default(0)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  accesos Acceso[]
+}
+
+/// Quién entra a qué app y con qué rol dentro de ella.
+model Acceso {
+  id        String   @id @default(cuid())
+  usuarioId String
+  usuario   Usuario  @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+  appId     String
+  app       App      @relation(fields: [appId], references: [id], onDelete: Cascade)
+  rol       String   // uno de App.roles[].valor
+  otorgadoPor String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([usuarioId, appId])
+}
+
+/// La bitácora: quién dio o quitó un acceso, quién entró a qué app.
+model Evento {
+  id        String   @id @default(cuid())
+  tipo      String   // acceso.otorgado · acceso.cambiado · acceso.retirado · app.entrada · usuario.*
+  quien     String   // nombre de quien lo hizo
+  detalle   String
+  appId     String?
+  createdAt DateTime @default(now())
+
+  @@index([createdAt])
+}
