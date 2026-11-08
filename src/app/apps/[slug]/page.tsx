@@ -111,7 +111,7 @@ export default async function FichaApp({ params, searchParams }: { params: Promi
               <Dato k="La llevan">{app.duenos}</Dato>
               <Dato k="Dirección">{app.url ? <a href={app.url} className="break-all text-verde-profundo hover:underline">{app.url.replace(/^https:\/\//, "")}</a> : "Aún no está publicado"}</Dato>
               {esAdmin && <Dato k="Conexión con el hub">{appConectada(app.slug) ? "Conectada" : "Falta el secreto del pase"}</Dato>}
-              {av.ok && av.despliegue && <Dato k="Última publicación">{av.despliegue.estado === "success" ? "Publicada" : av.despliegue.estado} · {haceCuanto(av.despliegue.fecha)}</Dato>}
+              {av.ok && av.despliegue && <Dato k="Última publicación">{av.despliegue.estado === "success" ? "Publicado" : av.despliegue.estado === "pending" ? "Publicando…" : "Falló"} · {haceCuanto(av.despliegue.fecha)}</Dato>}
             </Tarjeta>
 
             <Tarjeta className="p-5">

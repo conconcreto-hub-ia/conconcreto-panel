@@ -2,7 +2,7 @@ import "server-only";
 // El avance de cada app, leído de su repo en GitHub. Solo lectura.
 //
 // GITHUB_TOKEN: un token fine-grained de la organización, con permiso de solo lectura sobre
-// Contents, Metadata, Issues y Deployments. Sin token, el panel funciona igual y dice que no hay avance.
+// Contents, Metadata e Issues (el estado del commit sale con Contents). Sin token, el panel funciona igual y dice que no hay avance.
 // Las respuestas se guardan 5 minutos (revalidate): el panel no sondea nada de fondo.
 
 const API = "https://api.github.com";
@@ -51,26 +51,23 @@ export function porSemana(fechas: string[], ahora: Date, semanas = 8): number[] 
 type GhCommit = { sha: string; html_url: string; commit: { message: string; author: { name: string; date: string } }; author: { login: string } | null };
 type GhIssue = { number: number; title: string; state: string; html_url: string; labels: { name: string }[]; updated_at: string; pull_request?: unknown };
 type GhMilestone = { title: string; open_issues: number; closed_issues: number; due_on: string | null; html_url: string };
-type GhDeploy = { id: number; created_at: string; statuses_url: string };
-type GhDeployStatus = { state: string; environment_url?: string; target_url?: string; created_at: string };
+type GhEstadoCommit = { state: string; statuses: { context: string; state: string; updated_at: string; target_url: string | null }[] };
 
 export async function avance(repo: string | null): Promise<Avance> {
   if (!repo) return { ok: false, motivo: "Todavía no tiene repo en GitHub." };
   if (!process.env.GITHUB_TOKEN) return { ok: false, motivo: "El panel aún no tiene permiso de lectura en GitHub." };
   try {
     const desde = new Date(Date.now() - 8 * 7 * 86_400_000).toISOString();
-    const [commits, issues, hitos, despliegues] = await Promise.all([
+    // La publicación: Vercel la deja como estado («Vercel») del último commit de la rama principal.
+    const [commits, issues, hitos, estado] = await Promise.all([
       gh<GhCommit[]>(`/repos/${repo}/commits?per_page=100&since=${desde}`),
       gh<GhIssue[]>(`/repos/${repo}/issues?state=all&per_page=100`),
       gh<GhMilestone[]>(`/repos/${repo}/milestones?state=open&per_page=20`),
-      gh<GhDeploy[]>(`/repos/${repo}/deployments?environment=Production&per_page=1`).catch(() => [] as GhDeploy[]),
+      gh<GhEstadoCommit>(`/repos/${repo}/commits/HEAD/status`).catch(() => null),
     ]);
     const soloTareas = issues.filter((i) => !i.pull_request);
-    let despliegue: Despliegue | null = null;
-    if (despliegues[0]) {
-      const st = await gh<GhDeployStatus[]>(`/repos/${repo}/deployments/${despliegues[0].id}/statuses?per_page=1`).catch(() => []);
-      despliegue = { estado: st[0]?.state ?? "pending", fecha: st[0]?.created_at ?? despliegues[0].created_at, url: st[0]?.environment_url ?? null };
-    }
+    const v = estado?.statuses.find((x) => x.context.startsWith("Vercel"));
+    const despliegue: Despliegue | null = v ? { estado: v.state, fecha: v.updated_at, url: v.target_url } : null;
     return {
       ok: true,
       urlRepo: `https://github.com/${repo}`,
