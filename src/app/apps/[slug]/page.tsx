@@ -6,7 +6,6 @@ import { exigirSesion } from "@/lib/auth/sesion";
 import { db } from "@/lib/db";
 import { ESTADO, rolesDe } from "@/lib/apps";
 import { avance } from "@/lib/github";
-import { appConectada } from "@/lib/pase";
 import { administra } from "@/lib/auth/permisos";
 import { fecha, haceCuanto } from "@/lib/formato";
 import { EditorApp } from "./editor";
@@ -23,8 +22,7 @@ export default async function FichaApp({ params, searchParams }: { params: Promi
   const esSuper = u.rol === "superadmin";
   const av = await avance(app.repo);
   const roles = rolesDe(app);
-  const mio = app.accesos.find((a) => a.usuarioId === u.id);
-  const puedeEntrar = !!app.url && (esSuper || !!mio);
+  const puedeEntrar = !!app.url;
 
   return (
     <>
@@ -35,7 +33,7 @@ export default async function FichaApp({ params, searchParams }: { params: Promi
           et={ESTADO[app.estado].etiqueta}
           titulo={app.nombre}
           bajada={app.resumen}
-          acciones={puedeEntrar ? <a href={`/ir/${app.slug}`} className="inline-flex h-10 items-center gap-2 rounded-ctl px-4 font-display text-[14px] font-bold text-[#1a1300] [background:var(--degradado)] hover:brightness-110">Entrar <IconoExterno className="size-4" /></a> : undefined}
+          acciones={puedeEntrar ? <a href={app.url!} target="_blank" rel="noreferrer" className="inline-flex h-10 items-center gap-2 rounded-ctl px-4 font-display text-[14px] font-bold text-[#1a1300] [background:var(--degradado)] hover:brightness-110">Entrar <IconoExterno className="size-4" /></a> : undefined}
         />
         {error && <p role="alert" className="rounded-ctl border border-rojo/30 bg-rojo-suave px-4 py-3 text-[14px] text-rojo">{error}</p>}
 
@@ -112,12 +110,12 @@ export default async function FichaApp({ params, searchParams }: { params: Promi
             <Tarjeta className="space-y-3 p-5 text-[14px]">
               <Dato k="La llevan">{app.duenos}</Dato>
               <Dato k="Dirección">{app.url ? <a href={app.url} className="break-all text-verde-profundo hover:underline">{app.url.replace(/^https:\/\//, "")}</a> : "Aún no está publicado"}</Dato>
-              {esAdmin && <Dato k="Conexión con el hub">{appConectada(app.slug) ? "Conectada" : "Falta el secreto del pase"}</Dato>}
               {av.ok && av.despliegue && <Dato k="Última publicación">{av.despliegue.estado === "success" ? "Publicado" : av.despliegue.estado === "pending" ? "Publicando…" : "Falló"} · {haceCuanto(av.despliegue.fecha)}</Dato>}
             </Tarjeta>
 
             <Tarjeta className="p-5">
               <h3 className="text-[15px] font-bold">Los roles dentro del agente</h3>
+              <p className="mt-1 text-[12.5px] text-tinta-3">Se manejan dentro del agente, en su propia pantalla de usuarios.</p>
               <ul className="mt-2 space-y-2 pl-0">
                 {roles.map((r) => <li key={r.valor} className="list-none text-[13.5px]"><b className="font-display font-semibold">{r.etiqueta}</b> <span className="text-tinta-2">· {r.detalle}</span></li>)}
               </ul>
@@ -125,13 +123,13 @@ export default async function FichaApp({ params, searchParams }: { params: Promi
 
             {esAdmin && (
               <Tarjeta className="p-5">
-                <h3 className="text-[15px] font-bold">Quién entra</h3>
-                {app.accesos.length === 0 ? <p className="mt-1 text-[13.5px] text-tinta-3">Nadie todavía, salvo los administradores del hub.</p> : (
+                <h3 className="text-[15px] font-bold">Quién tiene el código</h3>
+                {app.accesos.filter((a) => a.codigo !== "ninguno").length === 0 ? <p className="mt-1 text-[13.5px] text-tinta-3">Nadie todavía.</p> : (
                   <ul className="mt-2 space-y-1.5 pl-0">
-                    {app.accesos.map((a) => <li key={a.id} className="list-none text-[13.5px]"><span className="font-semibold">{a.usuario.nombre}</span> <span className="text-tinta-3">· {roles.find((r) => r.valor === a.rol)?.etiqueta ?? a.rol}</span></li>)}
+                    {app.accesos.filter((a) => a.codigo !== "ninguno").map((a) => <li key={a.id} className="list-none text-[13.5px]"><span className="font-semibold">{a.usuario.nombre}</span> <span className="text-tinta-3">· {a.codigo === "escritura" ? "edita" : "ve"}{a.usuario.github ? ` · @${a.usuario.github}` : ""}</span></li>)}
                   </ul>
                 )}
-                <a href="/personas" className="mt-3 inline-block text-[13px] font-semibold text-verde-profundo hover:underline">Cambiar los accesos</a>
+                <a href="/personas" className="mt-3 inline-block text-[13px] font-semibold text-verde-profundo hover:underline">Cambiar quién tiene el código</a>
               </Tarjeta>
             )}
 

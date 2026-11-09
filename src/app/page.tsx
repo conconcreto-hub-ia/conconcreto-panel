@@ -17,17 +17,14 @@ const codigo = (orden: number) => `AG-${String(orden).padStart(2, "0")}`;
 export default async function CentroDeMando() {
   const u = await exigirSesion();
   const esAdmin = administra(u.rol);
-  const esSuper = u.rol === "superadmin";
-  const hace7 = new Date(Date.now() - 7 * 86_400_000);
-  const [apps, misAccesos, personas, entradas7, eventos] = await Promise.all([
-    db.app.findMany({ orderBy: { orden: "asc" }, include: { _count: { select: { accesos: true } } } }),
-    db.acceso.findMany({ where: { usuarioId: u.id } }),
+  const [apps, personas, conCodigo, eventos] = await Promise.all([
+    db.app.findMany({ orderBy: { orden: "asc" }, include: { _count: { select: { accesos: { where: { codigo: { not: "ninguno" } } } } } } }),
     db.usuario.count({ where: { activo: true } }),
-    db.evento.count({ where: { tipo: "app.entrada", createdAt: { gte: hace7 } } }),
+    db.usuario.count({ where: { activo: true, github: { not: null }, accesos: { some: { codigo: { not: "ninguno" } } } } }),
     esAdmin ? db.evento.findMany({ orderBy: { createdAt: "desc" }, take: 12 }) : Promise.resolve([]),
   ]);
-  // Solo ve los agentes a los que entra (el administrador, todos).
-  const visibles = esAdmin ? apps : apps.filter((a) => misAccesos.some((m) => m.appId === a.id));
+  // Todos ven todos los agentes: cada uno tiene su propio inicio de sesión, que maneja su equipo.
+  const visibles = apps;
   const [avances, saludes] = await Promise.all([Promise.all(visibles.map((a) => avance(a.repo))), Promise.all(visibles.map((a) => salud(a.url)))]);
 
   const publicados = saludes.filter((s) => s.estado !== "sin-publicar").length;
@@ -71,8 +68,8 @@ export default async function CentroDeMando() {
           <Indicador rotulo="Latencia media" valor={latencia === null ? "—" : `${latencia}`} unidad={latencia === null ? "" : "ms"} />
           <Indicador rotulo="Cambios · 4 sem" valor={`${cambios4}`} nota="en el código" />
           <Indicador rotulo="Tareas abiertas" valor={`${tareas}`} nota="en GitHub" />
-          <Indicador rotulo="Entradas · 7 días" valor={`${entradas7}`} nota="a los agentes" />
-          {esAdmin ? <Indicador rotulo="Personas" valor={`${personas}`} nota="con cuenta activa" /> : <Indicador rotulo="Tus agentes" valor={`${visibles.length}`} nota="a los que entras" />}
+          <Indicador rotulo="Con el código" valor={`${conCodigo}`} nota="personas en GitHub" />
+          <Indicador rotulo="Personas" valor={`${personas}`} nota="con cuenta en el hub" />
         </section>
 
         <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_340px]">
@@ -96,7 +93,6 @@ export default async function CentroDeMando() {
                     av={avances[i]}
                     sal={saludes[i]}
                     personas={a._count.accesos}
-                    rolMio={misAccesos.find((m) => m.appId === a.id)?.rol ?? (esSuper ? "admin" : null)}
                   />
                 ))}
               </div>
@@ -127,8 +123,8 @@ export default async function CentroDeMando() {
             <div className="modulo p-5">
               <h2 className="rotulo text-white/70">Cómo funciona</h2>
               <ul className="mt-3 space-y-2.5 pl-0 text-[13px] text-tinta-2">
-                <li className="list-none"><span className="font-mono text-oro">01</span> Una sola cuenta: la del hub.</li>
-                <li className="list-none"><span className="font-mono text-oro">02</span> «Entrar» abre el agente sin volver a pedir la clave.</li>
+                <li className="list-none"><span className="font-mono text-oro">01</span> El hub muestra cómo va cada agente y quién toca su código.</li>
+                <li className="list-none"><span className="font-mono text-oro">02</span> Cada agente tiene su propio inicio de sesión: lo administra su equipo.</li>
                 <li className="list-none"><span className="font-mono text-oro">03</span> Cada agente propone; una persona aprueba lo que sale.</li>
               </ul>
             </div>
@@ -154,9 +150,9 @@ function Indicador({ rotulo, valor, unidad, nota, tono = "neutro" }: { rotulo: s
 
 type AppFila = { id: string; slug: string; nombre: string; resumen: string; duenos: string; orden: number; estado: keyof typeof ESTADO; url: string | null };
 
-function ModuloAgente({ app, av, sal, personas, rolMio }: { app: AppFila; av: Avance; sal: Salud; personas: number; rolMio: string | null }) {
+function ModuloAgente({ app, av, sal, personas }: { app: AppFila; av: Avance; sal: Salud; personas: number }) {
   const est = ESTADO[app.estado];
-  const puedeEntrar = !!app.url && !!rolMio;
+  const puedeEntrar = !!app.url;
   const led = sal.estado === "en-linea" ? "led-ok" : sal.estado === "caido" ? "led-mal" : "led-off";
   const textoSalud = sal.estado === "en-linea" ? `En línea${sal.ms !== null ? ` · ${sal.ms} ms` : ""}` : sal.estado === "caido" ? "Sin respuesta" : "Sin publicar";
   return (
@@ -182,18 +178,18 @@ function ModuloAgente({ app, av, sal, personas, rolMio }: { app: AppFila; av: Av
       <dl className="mt-3 grid grid-cols-3 gap-2">
         <Metrica k="Último cambio" v={av.ok && av.commits[0] ? haceCuanto(av.commits[0].fecha) : "—"} />
         <Metrica k="Tareas" v={av.ok ? `${av.tareasAbiertas} abiertas` : "—"} />
-        <Metrica k="Personas" v={`${personas}`} />
+        <Metrica k="Con el código" v={`${personas}`} />
       </dl>
 
       <p className="mt-3 font-mono text-[11px] uppercase tracking-[.08em] text-tinta-3">Lo llevan · <span className="normal-case tracking-normal text-tinta-2">{app.duenos}</span></p>
 
       <div className="mt-auto flex flex-wrap gap-2 pt-4">
         {puedeEntrar ? (
-          <a href={`/ir/${app.slug}`} className="inline-flex h-9 items-center gap-2 rounded-ctl px-4 font-display text-[13.5px] font-bold text-[#1a1300] [background:var(--degradado)] hover:brightness-110">
+          <a href={app.url!} target="_blank" rel="noreferrer" className="inline-flex h-9 items-center gap-2 rounded-ctl px-4 font-display text-[13.5px] font-bold text-[#1a1300] [background:var(--degradado)] hover:brightness-110">
             Entrar <IconoExterno className="size-3.5" />
           </a>
         ) : (
-          <span className="inline-flex h-9 items-center rounded-ctl border border-dashed border-linea px-3.5 font-mono text-[11.5px] uppercase tracking-[.08em] text-tinta-3">{app.url ? "Sin acceso" : "Aún no publicado"}</span>
+          <span className="inline-flex h-9 items-center rounded-ctl border border-dashed border-linea px-3.5 font-mono text-[11.5px] uppercase tracking-[.08em] text-tinta-3">Aún no publicado</span>
         )}
         <Link href={`/apps/${app.slug}`} className="inline-flex h-9 items-center gap-1.5 rounded-ctl border border-linea px-3.5 font-display text-[13px] font-semibold text-tinta-2 hover:border-white/25 hover:text-white">
           Detalle <IconoFlecha className="size-3.5" />

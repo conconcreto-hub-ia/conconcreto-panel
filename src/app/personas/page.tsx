@@ -4,7 +4,6 @@ import { Contenedor, Encabezado, Insignia, Tarjeta } from "@/components/ui";
 import { exigirSesion } from "@/lib/auth/sesion";
 import { puede, ROL } from "@/lib/auth/permisos";
 import { db } from "@/lib/db";
-import { rolesDe } from "@/lib/apps";
 import { haceCuanto } from "@/lib/formato";
 import { githubAdminListo } from "@/lib/github-admin";
 import { FormNuevoUsuario, FilaAcciones, CeldaAcceso, SelectorRol, CampoGithub } from "./controles";
@@ -31,8 +30,8 @@ export default async function Personas() {
       <Contenedor className="space-y-6 py-10">
         <Encabezado
           et="Personas"
-          titulo="Quién opera cada agente"
-          bajada="Cada persona tiene una sola cuenta, la del hub. Aquí decides a qué agente entra, con qué rol dentro de él y si ve o edita su código en GitHub. Quitar un acceso o desactivar a alguien le cierra la sesión en el agente y lo saca del repo."
+          titulo="Las personas y el código"
+          bajada="Aquí decides quién ve o edita el código de cada agente en GitHub: el hub la invita al repo o la saca. Entrar a usar cada agente es aparte: cada uno tiene su propio inicio de sesión y sus usuarios los maneja su equipo."
         />
         {!ghListo && (
           <p className="rounded-ctl border border-oro/30 bg-oro-suave px-4 py-3 text-[13.5px] text-tinta-2">
@@ -46,7 +45,7 @@ export default async function Personas() {
                 <th className="px-5 py-3 font-medium">Persona</th>
                 <th className="px-2 py-3 font-medium">En el hub</th>
                 <th className="px-2 py-3 font-medium">GitHub</th>
-                {apps.map((a) => <th key={a.id} className="px-2 py-3 font-medium">{a.nombre}</th>)}
+                {apps.map((a) => <th key={a.id} className="px-2 py-3 font-medium">{a.nombre}<div className="font-normal text-tinta-3">código</div></th>)}
                 <th className="px-5 py-3 font-medium" />
               </tr>
             </thead>
@@ -71,9 +70,9 @@ export default async function Personas() {
                       return (
                         <td key={a.id} className="px-2 py-3">
                           <CeldaAcceso
-                            usuarioId={u.id} appId={a.id} nombreApp={a.nombre} roles={rolesDe(a)}
-                            rol={acc?.rol ?? ""} codigo={acc?.codigo ?? "ninguno"} codigoNota={acc?.codigoNota ?? null}
-                            tieneGithub={!!u.github} tieneRepo={!!a.repo && ghListo} esSuper={u.rol === "superadmin"} bloqueado={bloqueado}
+                            usuarioId={u.id} appId={a.id} nombreApp={a.nombre}
+                            codigo={acc?.codigo ?? "ninguno"} codigoNota={acc?.codigoNota ?? null}
+                            tieneGithub={!!u.github} tieneRepo={!!a.repo && ghListo} bloqueado={bloqueado}
                           />
                         </td>
                       );
@@ -95,7 +94,7 @@ export default async function Personas() {
             <ul className="mt-2 space-y-2 pl-0">
               {Object.values(ROL).map((r) => <li key={r.etiqueta} className="list-none text-[13.5px]"><b className="font-display font-semibold">{r.etiqueta}</b> <span className="text-tinta-2">· {r.detalle}</span></li>)}
             </ul>
-            <p className="mt-3 text-[12.5px] text-tinta-3">Debajo del rol de cada agente se elige el acceso al código: «Ve el código» o «Edita el código». GitHub le manda una invitación a la persona, que la acepta desde su correo.</p>
+            <p className="mt-3 text-[12.5px] text-tinta-3">En la columna de cada agente se elige «Ve el código» o «Edita el código». GitHub le manda una invitación a la persona, que la acepta desde su correo.</p>
           </Tarjeta>
         </div>
       </Contenedor>

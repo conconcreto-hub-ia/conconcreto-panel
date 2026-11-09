@@ -4,7 +4,7 @@ import { useActionState, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { Boton } from "@/components/ui";
 import { accionCrearUsuario, accionCambiarRol, accionActivar, accionNuevaClave, accionGithub } from "@/app/acceso";
-import { accionAcceso, accionCodigo } from "@/app/accesos";
+import { accionCodigo } from "@/app/accesos";
 import type { Rol } from "@prisma/client";
 
 const TODOS: { v: Rol; e: string }[] = [{ v: "miembro", e: "Miembro" }, { v: "admin", e: "Administrador" }, { v: "superadmin", e: "Superadministrador" }];
@@ -120,47 +120,24 @@ export function FilaAcciones({ id, activo, soyYo, bloqueado }: { id: string; act
 
 const NIVELES = [{ v: "ninguno", e: "Sin código" }, { v: "lectura", e: "Ve el código" }, { v: "escritura", e: "Edita el código" }] as const;
 
-/** El acceso de una persona a un agente: su rol dentro del agente y, debajo, su acceso al código en GitHub. */
-export function CeldaAcceso(p: {
-  usuarioId: string; appId: string; nombreApp: string; rol: string; roles: { valor: string; etiqueta: string }[];
-  codigo: string; codigoNota: string | null; tieneGithub: boolean; tieneRepo: boolean; esSuper: boolean; bloqueado: boolean;
-}) {
+/** El acceso al código de un agente en GitHub: sin código, ve o edita. Al cambiarlo, el hub la invita al repo o la saca. */
+export function CeldaAcceso(p: { usuarioId: string; appId: string; nombreApp: string; codigo: string; codigoNota: string | null; tieneGithub: boolean; tieneRepo: boolean; bloqueado: boolean }) {
   const router = useRouter();
   const [pendiente, empezar] = useTransition();
   const [aviso, setAviso] = useState<{ t: string; error?: boolean } | null>(null);
-  const correr = (fn: () => Promise<{ aviso?: string; nota?: string }>) =>
-    empezar(async () => { setAviso(null); try { const r = await fn(); const t = r.aviso ?? r.nota; if (t) setAviso({ t }); router.refresh(); } catch (e) { setAviso({ t: mensaje(e), error: true }); } });
-
-  const entra = p.esSuper || !!p.rol;
   return (
     <div className="space-y-1.5">
-      {p.esSuper ? (
-        <div className="flex h-8 items-center rounded-ctl border border-oro/30 bg-oro-suave px-2 text-[12.5px] font-semibold text-oro">Admin · todos</div>
-      ) : (
-        <select
-          aria-label={`Acceso a ${p.nombreApp}`}
-          value={p.rol}
-          disabled={pendiente || p.bloqueado}
-          onChange={(e) => { const v = e.target.value; correr(() => accionAcceso(p.usuarioId, p.appId, v)); }}
-          className={"h-8 w-full min-w-[132px] rounded-ctl border px-2 text-[13px] disabled:opacity-60 " + (p.rol ? "border-verde/50 bg-verde-suave font-semibold text-verde-profundo" : "border-linea bg-papel text-tinta-3")}
-        >
-          <option value="">Sin acceso</option>
-          {p.roles.map((r) => <option key={r.valor} value={r.valor}>{r.etiqueta}</option>)}
-        </select>
-      )}
-      {entra && (
-        <select
-          aria-label={`Código de ${p.nombreApp}`}
-          value={p.codigo}
-          disabled={pendiente || p.bloqueado || !p.tieneGithub || !p.tieneRepo}
-          title={!p.tieneGithub ? "Primero pon su usuario de GitHub" : !p.tieneRepo ? "El agente no tiene repo" : p.codigoNota ?? ""}
-          onChange={(e) => { const v = e.target.value as "ninguno" | "lectura" | "escritura"; correr(() => accionCodigo(p.usuarioId, p.appId, v)); }}
-          className={"h-7 w-full rounded-ctl border px-2 font-mono text-[11.5px] disabled:opacity-50 " + (p.codigo === "ninguno" ? "border-linea-2 bg-transparent text-tinta-3" : "border-white/20 bg-white/[.05] text-white")}
-        >
-          {NIVELES.map((n) => <option key={n.v} value={n.v}>{n.e}</option>)}
-        </select>
-      )}
-      {pendiente && <p className="text-[11px] text-tinta-3">Aplicando…</p>}
+      <select
+        aria-label={`Código de ${p.nombreApp}`}
+        value={p.codigo}
+        disabled={pendiente || p.bloqueado || !p.tieneGithub || !p.tieneRepo}
+        title={!p.tieneGithub ? "Primero pon su usuario de GitHub" : !p.tieneRepo ? "El agente no tiene repo o el hub no tiene permiso en GitHub" : p.codigoNota ?? ""}
+        onChange={(e) => { const v = e.target.value as "ninguno" | "lectura" | "escritura"; empezar(async () => { setAviso(null); try { const r = await accionCodigo(p.usuarioId, p.appId, v); setAviso({ t: r.nota }); router.refresh(); } catch (er) { setAviso({ t: mensaje(er), error: true }); } }); }}
+        className={"h-8 w-full min-w-[132px] rounded-ctl border px-2 text-[13px] disabled:opacity-50 " + (p.codigo === "ninguno" ? "border-linea bg-papel text-tinta-3" : p.codigo === "escritura" ? "border-oro/40 bg-oro-suave font-semibold text-oro" : "border-verde/50 bg-verde-suave font-semibold text-verde-profundo")}
+      >
+        {NIVELES.map((n) => <option key={n.v} value={n.v}>{n.e}</option>)}
+      </select>
+      {pendiente && <p className="text-[11px] text-tinta-3">Aplicando en GitHub…</p>}
       {aviso && <p className={"max-w-[190px] text-[11.5px] " + (aviso.error ? "text-rojo" : "text-tinta-3")}>{aviso.t}</p>}
     </div>
   );

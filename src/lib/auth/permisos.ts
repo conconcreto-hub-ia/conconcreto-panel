@@ -20,7 +20,7 @@ export const puede = (rol: Rol | null | undefined, p: Permiso) => !!rol && (PERM
 export const administra = (rol: Rol | null | undefined) => puede(rol, "usuarios.administrar");
 
 export const ROL: Record<Rol, { etiqueta: string; detalle: string }> = {
-  superadmin: { etiqueta: "Superadministrador", detalle: "Todo: entra a todos los agentes como administrador y nombra administradores" },
-  admin: { etiqueta: "Administrador", detalle: "Agrega personas, decide qué agente opera cada una y quién ve el código" },
-  miembro: { etiqueta: "Miembro", detalle: "Entra a los agentes que le dieron, con el rol que le dieron" },
+  superadmin: { etiqueta: "Superadministrador", detalle: "Todo, y es el único que nombra administradores" },
+  admin: { etiqueta: "Administrador", detalle: "Agrega personas y decide quién ve o edita el código de cada agente" },
+  miembro: { etiqueta: "Miembro", detalle: "Ve el centro de mando: cómo va cada agente" },
 };

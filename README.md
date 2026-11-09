@@ -5,41 +5,15 @@ El centro de mando de los agentes de IA de Conconcreto: qué hace cada una, cóm
 a cada app sin volver a poner la clave.
 Solo lleva la marca Conconcreto: es la herramienta de ellos.
 
-## Cómo funciona la entrada a una app
+## Cada agente es independiente
 
-```
-Persona ──ingresa──▶ panel (correo y clave)
-                       │  «Entrar» en una app
-                       ▼
-        /ir/<slug>: ¿tiene acceso? ¿con qué rol en esa app?
-                       │  firma un pase (JWT HS256, 60 s, un solo uso) con PASE_SECRETO_<SLUG>
-                       ▼
-        <app>/api/pase?t=…  la app verifica firma, emisor, destinatario, vigencia y que no se haya usado;
-                            crea o actualiza a la persona con ese rol y abre su sesión
-```
+Cada agente es su propio repo y tiene **su propio inicio de sesión**: sus usuarios y roles los maneja su equipo
+dentro del agente. El hub **no** entra por ellos (hasta el 9-nov-2026 lo hacía con un pase firmado; se quitó a
+propósito para que cada persona o equipo pueda ajustar su agente sin depender del hub). «Entrar» abre el agente
+en una pestaña nueva, en su pantalla de ingreso, y los agentes no tienen enlace de vuelta al hub.
 
-- **Un secreto por app.** El panel tiene `PASE_SECRETO_LICITACIONES`, `PASE_SECRETO_CIERRE`,
-  `PASE_SECRETO_PEDIDO_PAGO`, `PASE_SECRETO_FACTURACION_CAJA`; cada app tiene el suyo como `PANEL_PASE_SECRETO`,
-  más `PANEL_APP=<slug>`. Quien consiga el de una app no abre las otras. **Si se rota, se cambia en los dos lados.**
-- **El panel manda sobre quién entra.** Quitar un acceso o desactivar a alguien llama a `<app>/api/pase/retirar`
-  (servidor a servidor, con un pase de tipo «retiro»): la app la desactiva y le cierra las sesiones. Si la app no
-  contesta, el panel lo dice en pantalla; la persona igual ya no puede entrar desde el panel.
-- **Las personas que entran por el panel no tienen clave en la app.** Su hash es `pase:sin-clave-propia`. El
-  ingreso con clave de cada app sigue existiendo para su propio administrador.
-- **Tres roles en el hub** (`src/lib/auth/permisos.ts`): superadministrador (todo; entra a todos los agentes como
-  administrador; el único que nombra administradores o superadministradores o toca a otro superadministrador; siempre
-  queda al menos uno), administrador (agrega personas, da accesos y acceso al código; entra solo a los agentes que
-  tenga) y miembro. Las reglas viven en las acciones (`src/app/acceso.ts`, `src/app/accesos.ts`), no en la pantalla: se
-  probó inyectando la opción «Superadministrador» como administrador y el servidor lo rechaza.
-- Los roles dentro de cada agente los guarda `App.roles`, sembrados en `scripts/sembrar.ts`.
-
-## El acceso al código
-
-Cada persona tiene su usuario de GitHub (se comprueba que exista). Debajo de su rol en cada agente se elige «Ve el
-código» o «Edita el código» y el hub la deja como colaboradora del repo (`src/lib/github-admin.ts`); GitHub le manda la
-invitación. Quitarle el acceso al agente, cambiarle el usuario o desactivarla la saca del repo y cancela la invitación
-pendiente. Para eso usa **`GITHUB_ADMIN_TOKEN`** (fine-grained de la organización, Administration en lectura y
-escritura): es distinto de `GITHUB_TOKEN`, el de solo lectura que usa cada carga del centro de mando.
+Lo que sí hace el hub: mostrar cómo va cada agente (si está arriba y su avance en GitHub) y manejar **quién ve o
+edita el código** de cada uno.
 
 ## El avance
 
@@ -61,8 +35,8 @@ npx tsx scripts/crear-usuario.ts <correo> "<Nombre>" admin
 npm run dev                                         # http://localhost:3015
 ```
 
-`.env.local` (fuera de git): `DATABASE_URL` (Neon, `sslmode=verify-full`), `SESION_SECRETO`, los cuatro
-`PASE_SECRETO_*` y `GITHUB_TOKEN`. La dirección de cada app se pone en su ficha (`/apps/<slug>`, solo https).
+`.env.local` (fuera de git): `DATABASE_URL` (Neon, `sslmode=verify-full`), `SESION_SECRETO`, `GITHUB_TOKEN` (lectura)
+y `GITHUB_ADMIN_TOKEN` (invitar y retirar del código). La dirección de cada app se pone en su ficha (`/apps/<slug>`, solo https).
 
 ## Verificar
 
@@ -70,10 +44,8 @@ npm run dev                                         # http://localhost:3015
 npm run check   # typecheck + pruebas (claves, cookie, permisos, destino, cambios por semana)
 ```
 
-Cada app prueba su lado del pase en `src/lib/__tests__/pase.test.ts` (bueno, reusado, de otra app, otro
-secreto, otro emisor, vencido, de retiro, rol que no existe). Se probó de punta a punta en local: entrar a
-Licitaciones desde el panel, el pase reusado rechazado, uno firmado con otro secreto rechazado, dar y quitar
-acceso desde `/personas` con su registro en la bitácora y el retiro aplicado en la app.
+Se probó en local: crear y cambiar roles con las reglas de superadministrador (el servidor rechaza a un administrador
+que intenta nombrar a otro), validar el usuario de GitHub contra GitHub y que el token de administración no lea código.
 
 ## Las reglas que no se tocan
 

@@ -8,7 +8,6 @@ import { ingresar, salir, exigir, usuarioActual } from "@/lib/auth/sesion";
 import { cifrarClave, claveCorrecta, claveTemporal, problemaDeClave } from "@/lib/auth/clave";
 import type { Rol } from "@prisma/client";
 import { destinoSeguro } from "@/lib/auth/destino";
-import { avisarRetiro } from "@/lib/pase";
 import { puede, ROL } from "@/lib/auth/permisos";
 import { existeUsuario, quitarCodigo, usuarioValido } from "@/lib/github-admin";
 
@@ -119,16 +118,13 @@ export async function accionActivar(id: string, activo: boolean) {
     ...(activo ? [] : [db.sesion.deleteMany({ where: { usuarioId: id } })]),
   ]);
   if (!activo) {
-    // En cada agente queda desactivada también (a todos: un superadministrador entra sin acceso explícito),
-    // y sale de los repos a los que tenía acceso al código.
-    const apps = await db.app.findMany();
-    await Promise.all(apps.map((a) => avisarRetiro(a, otro)));
+    // Sale de los repos a los que tenía acceso al código. Su usuario dentro de cada agente lo maneja el agente.
     if (otro.github) {
       const conCodigo = await db.acceso.findMany({ where: { usuarioId: id, codigo: { not: "ninguno" } }, include: { app: true } });
       for (const a of conCodigo) if (a.app.repo) await quitarCodigo(a.app.repo, otro.github).catch(() => null);
       await db.acceso.updateMany({ where: { usuarioId: id }, data: { codigo: "ninguno", codigoNota: null } });
     }
-    await db.evento.create({ data: { tipo: "usuario.desactivado", quien: yo.nombre, detalle: `${otro.nombre} desactivado en el hub, en los agentes y en GitHub` } });
+    await db.evento.create({ data: { tipo: "usuario.desactivado", quien: yo.nombre, detalle: `${otro.nombre} desactivado en el hub y retirado de GitHub` } });
   }
   revalidatePath("/personas");
 }
